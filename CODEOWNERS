@@ -175,6 +175,8 @@ build.json @home-assistant/supervisor
 /tests/components/calendar/ @home-assistant/core
 /homeassistant/components/camera/ @home-assistant/core
 /tests/components/camera/ @home-assistant/core
+homeassistant/components/casambi/* @lkempf
+tests/components/casambi/* @lkempf
 /homeassistant/components/cast/ @emontnemery
 /tests/components/cast/ @emontnemery
 /homeassistant/components/cert_expiry/ @Cereal2nd @jjlawren

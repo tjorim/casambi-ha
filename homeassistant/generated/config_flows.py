@@ -60,6 +60,7 @@ FLOWS = {
         "bthome",
         "buienradar",
         "canary",
+        "casambi",
         "cast",
         "cert_expiry",
         "cloudflare",

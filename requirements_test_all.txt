@@ -387,6 +387,9 @@ buienradar==1.0.5
 # homeassistant.components.caldav
 caldav==0.9.1
 
+# homeassistant.components.casambi
+casambi-bt==0.0.3
+
 # homeassistant.components.co2signal
 co2signal==0.4.2
 

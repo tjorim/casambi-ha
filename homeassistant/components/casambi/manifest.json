@@ -1,0 +1,15 @@
+{
+  "domain": "casambi",
+  "name": "Casambi Bluetooth",
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/integrations/casambi",
+  "requirements": ["casambi-bt==0.0.3"],
+  "ssdp": [],
+  "zeroconf": [],
+  "homekit": {},
+  "dependencies": [],
+  "codeowners": [
+    "@lkempf"
+  ],
+  "iot_class": "local_push"
+}
