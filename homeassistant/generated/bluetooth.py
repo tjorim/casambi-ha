@@ -25,6 +25,10 @@ BLUETOOTH: list[dict[str, bool | str | int | list[int]]] = [
         "service_data_uuid": "0000181e-0000-1000-8000-00805f9b34fb",
     },
     {
+        "domain": "casambi",
+        "service_data_uuid": "0000fe4d-0000-1000-8000-00805f9b34fb",
+    },
+    {
         "domain": "fjaraskupan",
         "connectable": False,
         "manufacturer_id": 20296,

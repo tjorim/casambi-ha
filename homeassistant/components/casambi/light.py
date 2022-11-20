@@ -1,16 +1,17 @@
 """Support for Casambi compatible lights."""
 
+from __future__ import annotations
+
 from abc import ABCMeta
 from copy import copy
 import logging
-from typing import Any, Final, List, Union, cast
+from typing import Any, Final, Union, cast
 
 from CasambiBt import Group, Unit, UnitControlType, UnitState
 
 from homeassistant.components.casambi.const import (
     CONF_IMPORT_GROUPS,
     IDENTIFIER_NETWORK_ID,
-    IDENTIFIER_UUID,
 )
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
@@ -21,16 +22,17 @@ from homeassistant.components.light import (
     COLOR_MODE_RGB,
     COLOR_MODE_RGBW,
     COLOR_MODE_UNKNOWN,
+    ColorMode,
     LightEntity,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import DOMAIN, CasambiApi
 
-CASA_LIGHT_CTRL_TYPES: Final[List[UnitControlType]] = [
+CASA_LIGHT_CTRL_TYPES: Final[list[UnitControlType]] = [
     UnitControlType.DIMMER,
     UnitControlType.RGB,
     UnitControlType.WHITE,
@@ -46,11 +48,11 @@ async def async_setup_entry(
 ) -> None:
     casa_api: CasambiApi = hass.data[DOMAIN][config_entry.entry_id]
 
-    light_entities = [
+    light_entities: list[CasambiLight] = [
         CasambiLightUnit(casa_api, u) for u in casa_api.get_units(CASA_LIGHT_CTRL_TYPES)
     ]
 
-    group_entities = []
+    group_entities: list[CasambiLight] = []
     if config_entry.data[CONF_IMPORT_GROUPS]:
         group_entities = [CasambiLightGroup(casa_api, g) for g in casa_api.get_groups()]
 
@@ -58,7 +60,7 @@ async def async_setup_entry(
 
 
 class CasambiLight(LightEntity, metaclass=ABCMeta):
-    def __init__(self, api: CasambiApi, obj: Union[Group, Unit]) -> None:
+    def __init__(self, api: CasambiApi, obj: Group | Unit) -> None:
         self._api = api
         self._obj = obj
 
@@ -73,6 +75,7 @@ class CasambiLight(LightEntity, metaclass=ABCMeta):
     def available(self) -> bool:
         return self._api.available
 
+    @callback
     def change_callback(self, unit: Unit) -> None:
         self.schedule_update_ha_state(False)
 
@@ -96,7 +99,10 @@ class CasambiLight(LightEntity, metaclass=ABCMeta):
 
         return supported
 
-    def _mode_helper(self, modes: set[str]) -> str:
+    def _mode_helper(self, modes: set[ColorMode] | set[str] | None) -> str:
+        if not modes:
+            return COLOR_MODE_UNKNOWN
+
         # No support for color temperature (due to lack of test hardware)
 
         if COLOR_MODE_RGBW in modes:
@@ -130,8 +136,8 @@ class CasambiLightUnit(CasambiLight):
             manufacturer=unit.unitType.manufacturer,
             model=unit.unitType.model,
             sw_version=unit.firmwareVersion,
-            identifiers={(IDENTIFIER_UUID, unit.uuid)},
-            via_device=(IDENTIFIER_NETWORK_ID, self._api.casa.networkId),
+            identifiers={(DOMAIN, unit.uuid)},
+            via_device=(DOMAIN, self._api.casa.networkId),
         )
 
     @property
@@ -152,7 +158,7 @@ class CasambiLightUnit(CasambiLight):
     @property
     def rgbw_color(self) -> tuple[int, int, int, int] | None:
         unit = cast(Unit, self._obj)
-        return (*unit.state.rgb, unit.state.white)
+        return (*unit.state.rgb, unit.state.white)  # type: ignore[return-value]
 
     def change_callback(self, unit: Unit) -> None:
         _LOGGER.debug("Handling state change for unit %i", unit.deviceId)

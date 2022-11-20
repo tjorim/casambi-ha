@@ -5,6 +5,7 @@
             "bluetooth_error": "Bluetooth doesn't seem to work properly.",
             "cannot_connect": "Failed to connect",
             "invalid_auth": "Invalid authentication",
+            "reauth_successful": "Re-authentication was successful",
             "unknown": "Unexpected error"
         },
         "error": {

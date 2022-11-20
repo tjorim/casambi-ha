@@ -548,6 +548,11 @@
       "iot_class": "cloud_polling",
       "name": "Canary"
     },
+    "casambi": {
+      "config_flow": true,
+      "iot_class": "local_push",
+      "name": "Casambi Bluetooth"
+    },
     "cert_expiry": {
       "config_flow": true,
       "iot_class": "cloud_polling"

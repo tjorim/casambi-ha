@@ -7,9 +7,12 @@
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},
-  "dependencies": [],
-  "codeowners": [
-    "@lkempf"
-  ],
-  "iot_class": "local_push"
+  "dependencies": ["bluetooth"],
+  "codeowners": ["@lkempf"],
+  "iot_class": "local_push",
+  "bluetooth": [
+    {
+      "service_data_uuid": "0000fe4d-0000-1000-8000-00805f9b34fb"
+    }
+  ]
 }
