@@ -1,12 +1,14 @@
 """The Casambi Bluetooth integration."""
 from __future__ import annotations
 
+from collections.abc import Iterable
 import logging
-from typing import Callable, Dict, Final, Iterable, List
+from typing import Callable, Final
 
 from CasambiBt import Casambi, Group, Unit, UnitControlType
 from CasambiBt.errors import AuthenticationError, BluetoothError, NetworkNotFoundError
 
+from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
@@ -57,7 +59,8 @@ async def async_casmbi_api_setup(
     client = hass.helpers.httpx_client.get_async_client()
     try:
         casa = Casambi(client)
-        await casa.connect(address, password)
+        device = async_ble_device_from_address(hass, address, connectable=True)
+        await casa.connect(device, password)
     except BluetoothError as err:
         _LOGGER.warn("Failed to use bluetooth")
         raise ConfigEntryNotReady from err
@@ -68,7 +71,7 @@ async def async_casmbi_api_setup(
         _LOGGER.error("Network with address %s wasn't found", address)
         return None
     except Exception:  # pylint: disable=broad-except
-        _LOGGER.error("Unexpected error creating network %s", address, exc_info=1)
+        _LOGGER.error("Unexpected error creating network %s", address, exc_info=True)
         return None
 
     api = CasambiApi(casa)
@@ -95,7 +98,7 @@ class CasambiApi:
             return self.casa.units
 
         return filter(
-            lambda u: any([uc.type in control_types for uc in u.unitType.controls]),
+            lambda u: any([uc.type in control_types for uc in u.unitType.controls]),  # type: ignore[arg-type]
             self.casa.units,
         )
 

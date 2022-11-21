@@ -1,15 +1,16 @@
 """Config flow for Casambi Bluetooth integration."""
 from __future__ import annotations
 
-import asyncio
 import logging
-from typing import Any, Iterable
+from typing import Any
 
-from CasambiBt import Casambi, discover
-from CasambiBt.errors import AuthenticationError, BluetoothError, NetworkNotFoundError
+from CasambiBt import Casambi
+from CasambiBt.errors import AuthenticationError, NetworkNotFoundError
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.components.bluetooth import async_ble_device_from_address
+from homeassistant.components.bluetooth.models import BluetoothServiceInfoBleak
 from homeassistant.const import CONF_ADDRESS, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
@@ -27,7 +28,10 @@ async def _validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str
     """
     client = hass.helpers.httpx_client.get_async_client()
     casa = Casambi(client)
-    await casa.connect(data[CONF_ADDRESS], data[CONF_PASSWORD])
+    bt_device = async_ble_device_from_address(
+        hass, data[CONF_ADDRESS], connectable=True
+    )
+    await casa.connect(bt_device, data[CONF_PASSWORD])
 
     # Return info that you want to store in the config entry.
     return {"title": casa.networkName, "id": casa.networkId}
@@ -36,20 +40,9 @@ async def _validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Casambi Bluetooth."""
 
-    discover_task: asyncio.Task | None = None
+    discovery_info: BluetoothServiceInfoBleak | None = None
 
     VERSION = 1
-
-    async def _async_discover(self) -> Iterable[str] | None:  # TODO: Check return type
-        result: Iterable[str] | None = None
-        try:
-            result = await discover()  # Takes some time to complete.
-        finally:
-            self.hass.async_create_task(
-                self.hass.config_entries.flow.async_configure(flow_id=self.flow_id)
-            )
-
-        return result
 
     async def _async_create_casa_entry(
         self, title: str, id: str, data: dict[str, Any]
@@ -71,21 +64,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_create_entry(title=title, data=data)
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
-        """Handle the initial step. We search for networks here."""
-        if not self.discover_task:
-            self.discover_task = self.hass.async_create_task(self._async_discover())
-            return self.async_show_progress(step_id="user", progress_action="discover")
-
-        try:
-            self.addrs = await self.discover_task
-        except BluetoothError:
-            return self.async_show_progress_done(next_step_id="bluetooth_error")
-
-        return self.async_show_progress_done(next_step_id="network")
-
     async def async_step_bluetooth_error(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -95,16 +73,24 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """
         return self.async_abort(reason="bluetooth_error")
 
-    async def async_step_network(
+    async def async_step_bluetooth(
+        self, discovery_info: BluetoothServiceInfoBleak
+    ) -> FlowResult:
+        self.discovery_info = discovery_info
+        return self.async_show_form(step_id="user")
+
+    async def async_step_user(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
         """Handle entry of network information and attempt to connect."""
-        if not len(self.addrs):
-            self.addrs.append(None)
+
+        address_suggestion = vol.UNDEFINED
+        if self.discovery_info:
+            address_suggestion = self.discovery_info.address
 
         data_schema = vol.Schema(
             {
-                vol.Required(CONF_ADDRESS, default=self.addrs[0]): cv.string,
+                vol.Required(CONF_ADDRESS, default=address_suggestion): cv.string,
                 vol.Required(CONF_PASSWORD): cv.string,
                 vol.Required(CONF_IMPORT_GROUPS, default=True): cv.boolean,
             }
@@ -131,4 +117,4 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="user", data_schema=data_schema, errors=errors
             )
 
-        return self.async_show_form(step_id="network", data_schema=data_schema)
+        return self.async_show_form(step_id="user", data_schema=data_schema)
